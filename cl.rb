@@ -70,6 +70,10 @@ module CL
   def progn
     yield
   end
+
+  def list(*args)
+    args
+  end
 end
 
 class Object
