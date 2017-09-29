@@ -17,7 +17,7 @@ class Translator
     name, params, *body = args
 
     b = "def #{translate(name)}("
-    b += translate_argument_list(params)
+    b += translate_parameter_list(params)
     b += ")\n"
     body.each do |sexp|
       b += translate(sexp)
@@ -132,6 +132,35 @@ class Translator
     return (normal_args_translated + keyword_args_translated).join(', ')
   end
 
+  def translate_parameter_list(ls)
+    ls1 = ls.dup
+    translated = []
+    until ls1.empty?
+      sexp = ls1.shift
+      case sexp
+      when :"&optional"
+        until ls1.empty?
+          pair = ls1.shift
+          case pair
+          when Symbol
+            trnalsated = "#{translate pair} = nil"
+          when Array
+            translated << "#{translate(pair[0])} = #{translate(pair[1])}"
+          else
+            fail
+          end
+        end
+      when :"&rest"
+        sexp = ls1.shift
+        translated << "*#{translate(sexp)}"
+        ls1.shift
+      else
+        translated << translate(sexp)
+      end
+    end
+    return translated.join(', ')
+  end
+
   def translate_funcall(params)
     f, *args = params
     arglist = translate_argument_list(args)
@@ -181,8 +210,9 @@ class Translator
     if superklass
       b += "super(opts)\n"
     end
-    fields1.each do |fname, _init|
-      b += "self.#{fname} = (tmp = opts[#{fname.to_sym.inspect}]).nil? ? #{_init} : tmp\n"
+    fields1.each do |fname, init|
+      spec = "opts[#{fname.to_sym.inspect}]"
+      b += "@#{fname} = #{spec}.nil? ? #{init} : #{spec}\n"
     end
     b += "end\n"
 
@@ -196,10 +226,11 @@ class Translator
     # アクセッサー関数定義
     all_fields = @structs[name][:fields]
     all_fields.each do |fname, init|
-      b += "def #{name1}_#{translate(fname)}(x); x.#{translate(fname)}; end\n"
+      b += "def #{name1}_#{translate(fname)}(x)\nx.#{translate(fname)}\nend\n"
+      b += "def placeof_#{name1}_#{translate(fname)}(x)\nproc { |v| x.#{translate(fname)} = v }\nend\n"
     end
 
-    return b
+    return b += "#{name1.to_sym.inspect}"
   end
 
   def translate_quote(params)
@@ -210,6 +241,8 @@ class Translator
     when Array
       list = sexp.map { |e| translate_quote([e]) }.join(', ')
       "[#{list}]"
+    when :t
+      "true"
     when Symbol
       sexp.inspect
     when Integer
@@ -256,21 +289,24 @@ class Translator
     return b += "end"
   end
 
+  # def find_struct_accessor(funcname)
+  #   funcname1 = funcname.to_s
+  #   @structs.each do |name_sym, dict|
+  #     dict[:fields].each do |fname_sym|
+  #       if funcname1 == "#{name_sym}-#{fname_sym}"
+  #         return p([name_sym, fname_sym])
+  #       end
+  #     end
+  #   end
+  #   return [nil,nil]
+  # end
+
   def translate_place(exp)
-    if exp.is_a? Symbol
-      return translate(exp)
-    end
-
     fail unless exp.is_a? Array
-    fail unless exp.size >= 2
+    fail unless exp.size > 0
 
-    case exp[0]
-    when :aref
-      translate_aref(exp[1..-1])
-    when /^(.+?)-(.+)$/ # assume $1 is a type name
-      "(#{translate(exp[1])}).#{translate($2.to_sym)}"
-    else fail "#{exp[0]} unimplemented"
-    end
+    arglist = translate_argument_list(exp[1..-1])
+    "placeof_#{translate(exp[0])}(#{arglist})"
   end
 
   def translate_setf(params)
@@ -280,22 +316,37 @@ class Translator
     end
 
     translate_pair = lambda do |(lhs, rhs)|
-      "#{translate_place(lhs)} = #{translate(rhs)}"
+      case lhs
+      when Symbol
+        "#{translate(lhs)} = #{translate(rhs)}"
+      when Array
+        "#{translate_place(lhs)}.(#{translate(rhs)})"
+      end
     end
 
     return params.each_slice(2).map(&translate_pair).join("\n")
   end
 
+  def translate_push(params)
+    fail unless params.size == 2
+    elt, ls = params
+
+    translate_setf [ls, [:push_imp, elt, ls]]
+    #"#{translate_place(ls)} = push_imp(#{translate(elt)}, #{translate(ls)})"
+  end
+
   def translate_incf(params)
     lhs, amount = params
     amount ||= 1
-    "#{translate_place(lhs)} += #{translate(amount)}"
+    translate_setf [lhs, [:+, lhs, amount]]
+    #"#{translate_place(lhs)} += #{translate(amount)}"
   end
 
   def translate_decf(params)
     lhs, amount = params
     amount ||= 1
-    "#{translate_place(lhs)} -= #{translate(amount)}"
+    translate_setf [lhs, [:-, lhs, amount]]
+    #"#{translate_place(lhs)} -= #{translate(amount)}"
   end
 
   def translate_case(params)
@@ -375,11 +426,11 @@ class Translator
       case sexp
       when Symbol
         pnames << sexp
-        ptypes << Object
+        ptypes << "Object"
       when Array
         name, type, = sexp
         pnames << name
-        ptypes << type.to_s.capitalize
+        ptypes << translate_symbol(type).capitalize
       end
     end
 
@@ -402,6 +453,7 @@ class Translator
     vars = []
     test = nil
     collect = nil # loop variable to be recorded
+    test_polarity = true
 
     # analysis phase
     loop do
@@ -451,6 +503,11 @@ class Translator
         input.shift
         test = input[0]
         input.shift
+      elsif input[0] == :until
+        input.shift
+        test = input[0]
+        test_polarity = false
+        input.shift
       elsif input[0] == :collect
         input.shift
         collect = input[0]
@@ -483,7 +540,11 @@ class Translator
 
     b += "begin\n"
     if test
-      b += "while #{translate(test)}\n"
+      if test_polarity
+        b += "while #{translate(test)}\n"
+      else
+        b += "until #{translate(test)}\n"
+      end
     else
       b += "loop do\n"
     end
@@ -543,7 +604,9 @@ class Translator
     when String
       "#{sexp.inspect}"
     when Array
-      if sexp.size >= 1
+      if sexp.empty?
+        "nil"
+      else
         first, *rest = sexp
         case first
         when :defun
@@ -600,6 +663,8 @@ class Translator
           translate_loop(rest)
         when :flet
           translate_flet(rest)
+        when :push
+          translate_push(rest)
         when :"destructuring-bind"
           translate_destructuring_bind(rest)
         when :"with-open-file"
@@ -619,8 +684,6 @@ class Translator
         else
           translate_function_application(first, rest)
         end
-      else
-        fail 'case not covered'
       end
     when Integer
       "#{sexp.inspect}"

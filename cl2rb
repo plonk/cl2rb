@@ -4,7 +4,12 @@ require 'sxp'
 require 'pp'
 require_relative 'translator'
 
-def main
+  require 'readline'
+  require 'mathn'
+  require_relative 'cl'
+  include CL
+
+def _main
   program = SXP::Reader::CommonLisp.read_all(ARGF.read)
 
   puts "require 'mathn'"
@@ -27,6 +32,46 @@ def main
     puts translator.translate(sexp)
     puts
   end
+end
+
+def main
+  $translator = Translator.new
+  $global_scope = binding
+
+  if ARGV.delete("-t") == "-t"
+    _main
+  elsif ARGV.delete("-l") == "-l"
+    filename = ARGV[0]
+    ARGV.clear
+    CL.load(filename)
+    repl
+  else
+    repl
+  end
+end
+
+
+RECORD_HISTORY = true
+
+def repl
+  prompt = "> "
+  buf = ""
+  while line = Readline.readline(prompt, RECORD_HISTORY)
+    buf += line
+    begin
+      sexp = SXP::Reader::CommonLisp.read(buf)
+      buf = ""
+      prompt = "> "
+    rescue  SXP::Reader::EOF
+      prompt = "*   "
+      next
+    end
+    rb = $translator.translate(sexp)
+    value = Kernel.eval(rb, $global_scope)
+    puts
+    p value
+  end
+  puts "\nBye."
 end
 
 if __FILE__ == $0
