@@ -9,3 +9,11 @@
       do
       (print i)
       (print k))
+
+(loop for i to 3
+  do
+  (print i))
+
+(print (loop for i to 3 collect i do (print i)))
+
+(print (loop for i to 3))

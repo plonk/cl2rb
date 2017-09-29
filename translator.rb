@@ -9,10 +9,6 @@ class Translator
     return "#{translate(name)}(#{args1})"
   end
 
-  def translate_params(params)
-    params.join(', ')
-  end
-
   def translate_defun(args)
     fail unless args.size >= 2
     fail unless args[0].is_a? Symbol
@@ -21,7 +17,7 @@ class Translator
     name, params, *body = args
 
     b = "def #{translate(name)}("
-    b += translate_params(params)
+    b += translate_argument_list(params)
     b += ")\n"
     body.each do |sexp|
       b += translate(sexp)
@@ -212,11 +208,14 @@ class Translator
 
     case sexp
     when Array
-      "[#{sexp.map(&method(:translate)).join(', ')}]"
+      list = sexp.map { |e| translate_quote([e]) }.join(', ')
+      "[#{list}]"
     when Symbol
       sexp.inspect
     when Integer
       sexp.to_s
+    when String
+      sexp.inspect
     else
       fail "unhandled case #{sexp.inspect}"
     end
@@ -354,8 +353,8 @@ class Translator
 
   def translate_lambda(params)
     arglist, *body = params
-    "lambda do |#{translate_argument_list(arglist)}|\n" +
-      body.map(&method(:translate)).join("\n") + "\nend"
+    "lambda { |#{translate_argument_list(arglist)}|\n" +
+      body.map(&method(:translate)).join("\n") + "\n}"
   end
 
   def translate_progn(params)
@@ -394,6 +393,147 @@ class Translator
   def translate_call_next_method(params)
     fail unless params.empty?
     "next_method.call"
+  end
+
+  def translate_loop(params)
+    input = params.dup
+
+    body = []
+    vars = []
+    test = nil
+    collect = nil # loop variable to be recorded
+
+    # analysis phase
+    loop do
+      if input.empty?
+        break
+      elsif input[0] == :do
+        body = input[1..-1]
+        input = []
+      elsif input[0] == :for
+        input.shift
+        var = input[0]
+        lbound = 0
+        ubound = Float::INFINITY
+        inclusive = false
+        done = false
+        input.shift
+        while true
+          case input[0]
+          when :from
+            input.shift
+            lbound = input[0]
+            input.shift
+          when :below
+            input.shift
+            ubound = input[0]
+            inclusive = false
+            input.shift
+          when :to
+            input.shift
+            ubound = input[0]
+            inclusive = true
+            input.shift
+          when :in
+            input.shift
+            vars << { name: var, type: :list, list: input[0] }
+            input.shift
+            done = true
+            break
+          else
+            break
+          end
+        end
+        unless done
+          vars << { name: var, type: :range, lbound: lbound, ubound: ubound, inclusive: inclusive }
+        end
+      elsif input[0] == :while
+        input.shift
+        test = input[0]
+        input.shift
+      elsif input[0] == :collect
+        input.shift
+        collect = input[0]
+        input.shift
+      else
+        fail "unexpected token #{input[0]}"
+      end
+    end
+
+    # generation phase
+    b = ""
+    b += "progn do\n" # contain generators
+    vars.each do |v|
+      b += "#{translate(v[:name])}_gen = Enumerator.new do |y|\n"
+      case v[:type]
+      when :range
+        op =  v[:inclusive] ? ".." : "..."
+        b += "(#{translate v[:lbound]} #{op} #{translate v[:ubound]}).each do |e|\n"
+      when :list
+        b += "#{translate v[:list]}.each do |e|\n"
+      else fail
+      end
+      b += "y << e\n"
+      b += "end\n" # each
+      b += "end\n" # Enumerator.new
+    end
+    if collect
+      b += "#{translate collect}_collected = []\n"
+    end
+
+    b += "begin\n"
+    if test
+      b += "while #{translate(test)}\n"
+    else
+      b += "loop do\n"
+    end
+    vars.each do |v|
+      b += "#{translate v[:name]} = #{translate v[:name]}_gen.next\n"
+    end
+    b += "progn do\n"
+    body.each do |sexp|
+      b += translate(sexp) + "\n"
+    end
+    b += "end\n" # progn
+    b += "#{translate collect}_collected << #{translate collect}\n" if collect
+    b += "end\n" # loop
+    b += "rescue StopIteration\n"
+    b += "end\n" # begin
+    if collect
+      b += "#{translate collect}_collected\n"
+    else
+      # b += "nil\n"
+    end
+    return b += "end" # progn
+  end
+
+  def translate_flet(params)
+    defuns, *body = params
+
+    b = ""
+    defuns.each do |name, arglist, *fbody|
+      b += "define_method(#{ translate(name).to_sym.inspect }) do |#{ translate_argument_list(arglist) }|\n"
+      b += fbody.map(&method(:translate)).join("\n") + "\n"
+      b += "end\n"
+    end
+
+    return b += body.map(&method(:translate)).join("\n")
+  end
+
+  def translate_destructuring_bind(params)
+    vars, init, *body = params
+    b = ""
+    b += "progn do\n"
+    b += "#{translate_argument_list(vars)} = #{translate init}\n"
+    b += body.map(&method(:translate)).join("\n")
+    return b += "\nend"
+  end
+
+  def translate_with_open_file(params)
+    (var, *args), *body = params
+    b = "with_open_file(#{translate_argument_list(args)}) do |#{translate var}|\n"
+    b += body.map(&method(:translate)).join(", ")
+    return b += "\nend"
   end
 
   def translate(sexp)
@@ -456,6 +596,14 @@ class Translator
           translate_aref(rest)
         when :defmethod
           translate_defmethod(rest)
+        when :loop
+          translate_loop(rest)
+        when :flet
+          translate_flet(rest)
+        when :"destructuring-bind"
+          translate_destructuring_bind(rest)
+        when :"with-open-file"
+          translate_with_open_file(rest)
         when :"call-next-method"
           translate_call_next_method(rest)
         when :"="
@@ -477,7 +625,7 @@ class Translator
     when Integer
       "#{sexp.inspect}"
     else
-      fail "case not covered for #{sexp}"
+      fail "case not covered for #{sexp.inspect}"
     end
   end
 end

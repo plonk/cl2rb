@@ -19,10 +19,10 @@ def main
 
   translator = Translator.new
   program.each do |sexp|
-    io = StringIO.new
-    PP.pp(sexp, io)
-    puts io.string
-    puts
+    # io = StringIO.new
+    # PP.pp(sexp, io)
+    # puts io.string
+    # puts
 
     puts translator.translate(sexp)
     puts
