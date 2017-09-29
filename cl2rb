@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+
+require 'sxp'
+require 'pp'
+require_relative 'translator'
+
+def main
+  program = SXP::Reader::CommonLisp.read_all(ARGF.read)
+
+  puts "require 'mathn'"
+  # puts "require 'cl'"
+  # puts "require_relative 'cl'"
+
+  puts File.read('translator.rb')
+  puts File.read('cl.rb')
+
+  puts 'include CL'
+  puts '# --------------------------------'
+
+  translator = Translator.new
+  program.each do |sexp|
+    io = StringIO.new
+    PP.pp(sexp, io)
+    puts io.string
+    puts
+
+    puts translator.translate(sexp)
+    puts
+  end
+end
+
+if __FILE__ == $0
+  main
+end
