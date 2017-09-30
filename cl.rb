@@ -207,15 +207,17 @@ module CL
     (n / divisor).floor
   end
 
-  def make_array(arg)
+  def make_array(arg, opts = {})
     case arg
     when Integer
-      Array.new(arg)
+      make_array([arg], opts)
     when Array
       if arg.size == 0
-        nil 
+        fail "0-dimensional array not implemented"
+      elsif arg.size == 1
+        Array.new(arg[0])
       else
-        Array.new(arg[0]) { make_array(arg.drop(1)) }
+        Array.new(arg[0]) { make_array(arg.drop(1), opts) }
       end
     end
   end
