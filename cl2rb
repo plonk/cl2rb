@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+# 末尾再帰最適化を有効化する。
 RubyVM::InstructionSequence.compile_option = {
   tailcall_optimization: true,
   trace_instruction: false
@@ -9,76 +10,87 @@ require 'sxp'
 require 'pp'
 require_relative 'translator'
 
-  require 'readline'
-  require 'mathn'
-  require_relative 'cl'
-  include CL
+require 'readline'
+require 'mathn'
+require_relative 'cl'
+include CL
 
-def _main
-  program = SXP::Reader::CommonLisp.read_all(ARGF.read)
-
-  puts "require 'mathn'"
-  # puts "require 'cl'"
-  # puts "require_relative 'cl'"
-
-  puts File.read('translator.rb')
-  puts File.read('cl.rb')
-
-  puts 'include CL'
-  puts '# --------------------------------'
-
-  translator = Translator.new
-  program.each do |sexp|
-    # io = StringIO.new
-    # PP.pp(sexp, io)
-    # puts io.string
-    # puts
-
-    puts translator.translate(sexp)
-    puts
-  end
-end
-
-def main
-  $translator = Translator.new
-  $global_scope = binding
-
-  if ARGV.delete("-t") == "-t"
-    _main
-  elsif ARGV.delete("-l") == "-l"
-    filename = ARGV[0]
-    ARGV.clear
-    CL.load(filename)
-    repl
-  else
-    repl
-  end
-end
+require 'optparse'
+require 'ostruct'
 
 
-RECORD_HISTORY = true
+module Cl2rb
+  module_function
 
-def repl
-  prompt = "> "
-  buf = ""
-  while line = Readline.readline(prompt, RECORD_HISTORY)
-    buf += line
-    begin
-      sexp = SXP::Reader::CommonLisp.read(buf)
-      buf = ""
-      prompt = "> "
-    rescue  SXP::Reader::EOF
-      prompt = "*   "
-      next
+  def translate_file(filename)
+    program = SXP::Reader::CommonLisp.read_all(File.read(filename))
+
+    program.each do |sexp|
+      puts $translator.translate(sexp)
+      puts
     end
-    rb = $translator.translate(sexp)
-    value = Kernel.eval(rb, $global_scope)
-    puts
-    p value
   end
-  puts "\nBye."
+
+  def main
+    $translator = Translator.new
+
+    opts = OpenStruct.new
+    opts.mode = :repl
+    OptionParser.new do |parser|
+      parser.banner = "Usage: cl2rb"
+      parser.on("-l", "--load LISP_FILE", "Load Lisp file") do |file|
+        opts.load_file = file
+      end
+
+      parser.on("-s", "--script LISP_FILE", "Load Lisp file and exit") do |file|
+        opts.load_file = file
+        opts.mode = :script
+      end
+
+      parser.on("-t", "--translate LISP_FILE", "Translate Lisp to Ruby") do |file|
+        opts.load_file = file
+        opts.mode = :translate
+      end
+    end.parse!(ARGV)
+
+    case opts.mode
+    when :repl
+      opts.load_file and CL.load(opts.load_file)
+      repl
+    when :script
+      CL.load(opts.load_file)
+      exit 0
+    when :translate
+      translate_file(opts.load_file)
+    end
+  end
+
+  RECORD_HISTORY = true
+
+  def repl
+    prompt = "> "
+    buf = ""
+    while line = Readline.readline(prompt, RECORD_HISTORY)
+      buf += line
+      begin
+        sexp = SXP::Reader::CommonLisp.read(buf)
+        buf = ""
+        prompt = "> "
+      rescue  SXP::Reader::EOF
+        prompt = "*   "
+        next
+      end
+      rb = $translator.translate(sexp)
+      value = Kernel.eval(rb, $global_scope)
+      puts
+      p value
+    end
+    puts "\nBye."
+  end
 end
+
+$global_scope = binding
 
 if __FILE__ == $0
-  main
+  Cl2rb.main
 end
