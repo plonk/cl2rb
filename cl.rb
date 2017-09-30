@@ -126,11 +126,39 @@ module CL
   end
 
   def car(arr)
-    arr[0]
+    case arr
+    when Array 
+      arr[0]
+    when Cons
+      arr.car
+    end
   end
 
   def placeof_car(arr)
-    proc { |v| arr[0] = v }
+    case arr
+    when Array
+      proc { |v| arr[0] = v }
+    when Cons
+      proc { |v| arr.car = v }
+    end
+  end
+
+  def cdr(arr)
+    case arr
+    when Array
+      arr[1..-1]
+    when Cons
+      arr.cdr
+    end
+  end
+
+  def placeof_cdr(arr)
+    case arr
+    when Array
+      proc { |v| arr[1..-1] = v }
+    when Cons
+      proc { |v| arr.cdr = v }
+    end
   end
 
   def max(*xs)
@@ -238,6 +266,66 @@ module CL
     puts
     return true
   end
+
+  def every(pred, list)
+    list.all?(&pred)
+  end
+
+  def code_char(code)
+    code.chr
+  end
+
+  def ash(integer, count)
+    integer << count
+  end
+
+  def type_of(instance)
+    if instance.respond_to?(:_type)
+      instance._type
+    else
+      instance.class.to_sym.downcase
+    end
+  end
+
+  def mod(number, divisor)
+    number.divmod(divisor)[1]
+  end
+
+  def mapcar(function, *lists)
+    shortest = lists.map(&:size).min
+    shortest.times.map do |i|
+      args = lists.map { |ls| ls[i] }
+      function.call(*args)
+    end
+  end
+
+  def plus(*operands)
+    operands.inject(0, :+)
+  end
+
+  def less_than(*operands)
+    operands.each_cons(2).all? { |a,b| a < b }
+  end
+
+  def numberp(v)
+    v.is_a? Numeric
+  end
+
+  def integerp(v)
+    v.is_a? Integer
+  end
+
+  def symbol_name(sym)
+    sym.to_s.upcase # 大文字化すべきでない？
+  end
+
+  def char(str, index)
+    str[index]
+  end
+
+  def char_code(c)
+    c.ord
+  end
 end
 
 class Object
@@ -271,5 +359,23 @@ class Object
     m = { param_types: params, proc: body }
     $cl_methods[name] += [m]
     return name
+  end
+end
+
+class Cons
+  class << self
+    def [](car, cdr)
+      Cons.new(car, cdr)
+    end
+  end
+
+  attr_accessor :car, :cdr
+  def initialize(car, cdr)
+    @car = car
+    @cdr = cdr
+  end
+
+  def inspect
+    "(#{@car} . #{@cdr})"
   end
 end

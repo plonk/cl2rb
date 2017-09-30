@@ -110,7 +110,14 @@ class Translator
     fail unless params.size == 1
     fail unless params[0].is_a? Symbol
     f, = params
-    "method(#{translate(f).to_sym.inspect})"
+    case f
+    when :+
+      "method(:plus)"
+    when :<
+      "method(:less_than)"
+    else
+      "method(#{translate(f).to_sym.inspect})"
+    end
   end
 
   def translate_argument_list(args)
@@ -186,6 +193,7 @@ class Translator
     when Array
       name1 = translate_symbol(name[0])
       superklass = find_superklass(name[1])
+      name = name[0]
     end
     fail 'invalid field definition' unless fields.all? { |f| f.is_a? Array }
     fail 'invalid field definition' unless fields.all? { |f| f.size == 2 }
@@ -203,6 +211,7 @@ class Translator
     fields1.each do |fname, _init|
       b += "attr_accessor #{fname.to_sym.inspect}\n"
     end
+    b += "def _type\n#{name.inspect}\nend\n"
 
     # コンストラクタ定義
 
@@ -239,8 +248,12 @@ class Translator
 
     case sexp
     when Array
-      list = sexp.map { |e| translate_quote([e]) }.join(', ')
-      "[#{list}]"
+      if sexp.size == 3 && sexp[1] == :"."
+        "Cons[#{translate_quote([sexp[0]])}, #{translate_quote([sexp[2]])}]"
+      else
+        list = sexp.map { |e| translate_quote([e]) }.join(', ')
+        "[#{list}]"
+      end
     when :t
       "true"
     when Symbol
@@ -352,13 +365,16 @@ class Translator
   def translate_case(params)
     test, *clauses = params
     b = "case #{translate(test)}\n"
-    clauses.each do |val, body|
+    clauses.each do |val, *body|
       if val == :otherwise
         b += "else\n"
+      elsif val.is_a? Array
+        vals = val.map { |v| translate([:quote, v]) }.join(", ")
+        b += "when #{vals}\n"
       else
         b += "when #{translate([:quote, val])}\n"
       end
-      b += "#{translate(body)}\n"
+      b += body.map(&method(:translate)).join("\n") + "\n"
     end
     return b += "end"
   end
@@ -606,6 +622,8 @@ class Translator
     when Array
       if sexp.empty?
         "nil"
+      # elsif sexp.size == 3 && sexp[1] == :"."
+      #   translate_dot_pair(sexp[0], sexp[2])
       else
         first, *rest = sexp
         case first
