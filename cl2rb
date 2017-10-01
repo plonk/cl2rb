@@ -13,6 +13,7 @@ require_relative 'translator'
 require 'readline'
 require 'mathn'
 require_relative 'cl'
+require_relative 'sb_ext'
 include CL
 
 require 'optparse'

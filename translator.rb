@@ -3,10 +3,22 @@ class Translator
     @structs = {}
   end
 
+  def translate_function_name(symbol)
+    symbol1 = symbol.to_s
+    if symbol1 =~ /:/
+      package, fname = symbol1.split(':', 2)
+      modname = sanitize_module_name(package)
+      fname1 = sanitize_method_name(fname)
+      return "#{modname}.#{fname1}"
+    else
+      return translate_symbol(symbol)
+    end
+  end
+
   def translate_function_application(name, args)
     fail "#{name.inspect} is not a symbol" unless name.is_a? Symbol
     args1 = translate_argument_list(args)
-    return "#{translate(name)}(#{args1})"
+    return "#{translate_function_name(name)}(#{args1})"
   end
 
   def translate_defun(args)
@@ -45,6 +57,21 @@ class Translator
     name.gsub(/->/, '_to_')
       .sub(/\?$/, 'p')
       .gsub(/\W/, '_')
+  end
+
+  def sanitize_module_name(name)
+    name1 = name.gsub(/[^\w?]/, '_')
+
+    if name1 !~ /^[A-Z]/
+      name1.capitalize
+    else
+      name1
+    end
+  end
+
+  def sanitize_method_name(name)
+    name.gsub(/->/, '_to_')
+      .gsub(/[^\w?]/, '_')
   end
 
   def translate_symbol(symbol)
