@@ -613,6 +613,15 @@ class Translator
     return b += "\nend"
   end
 
+  def translate_dolist(params)
+    (var, list), *body = params # result-form is not supported
+    b = "nil.tap do\n"
+    b += "(#{translate(list)} || []).each do |#{translate(var)}|\n"
+    b += body.map(&method(:translate)).join("\n") + "\n"
+    return b += "end\nend"
+  end
+    
+
   def translate(sexp)
     case sexp
     when Symbol
@@ -689,6 +698,8 @@ class Translator
           translate_with_open_file(rest)
         when :"call-next-method"
           translate_call_next_method(rest)
+        when :"dolist"
+          translate_dolist(rest)
         when :"="
           translate_equal(first, rest)
         when :"*", :"+", :"-", :"/"

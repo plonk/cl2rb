@@ -80,34 +80,19 @@ module CL
   end
 
   def load(filename, *_)
-    if filename =~ /\.lisp\z/
-      fasl = filename.sub(/\.lisp\z/, ".rb")
-      if !test("f", fasl) || test(">", filename, fasl)
-        STDERR.puts "making fasl #{fasl}" if $DEBUG
-        rb = ""
-        SXP::Reader::CommonLisp.read_all(File.read(filename)).each do |sexp|
-          rb.concat $translator.translate(sexp)
-          rb.concat "\n"
-        end
-        rb.concat("\n") if rb[-1] != "\n"
-        rb2 = RubyBeautify.pretty_string(rb, indent_token: ' ', indent_count: 2)
-        open(fasl, "w") do |f|
-          f.write(rb2)
-        end
-        Kernel.eval(rb2, $global_scope)
-      else
-        STDERR.puts "using fasl #{fasl}" if $DEBUG
-        Kernel.eval(File.read(fasl), $global_scope)
-      end
-    else
-      STDERR.puts "loading #{filename}" if $DEBUG
-      rb = ""
-      SXP::Reader::CommonLisp.read_all(File.read(filename)).each do |sexp|
-        rb.concat $translator.translate(sexp)
-        rb.concat "\n"
-      end
-      Kernel.eval(rb, $global_scope)
+    fasl = filename.sub(/\.lisp\z|\z/, ".rb")
+    STDERR.puts "making fasl #{fasl}" if $DEBUG
+    rb = ""
+    SXP::Reader::CommonLisp.read_all(File.read(filename)).each do |sexp|
+      rb.concat $translator.translate(sexp)
+      rb.concat "\n"
     end
+    rb.concat("\n") if rb[-1] != "\n"
+    rb2 = RubyBeautify.pretty_string(rb, indent_token: ' ', indent_count: 2)
+    open(fasl, "w") do |f|
+      f.write(rb2)
+    end
+    Kernel.eval(rb2, $global_scope)
     true
   end
 
@@ -349,6 +334,10 @@ module CL
 
   def char_code(c)
     c.ord
+  end
+
+  def equal(a, b)
+    a == b
   end
 end
 
