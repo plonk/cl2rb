@@ -355,6 +355,16 @@ module CL
   def software_version
     "Unknown"
   end
+
+  def dolist(list)
+    return nil if list.nil?
+
+    list.each do |elt|
+      yield(elt)
+    end
+    return nil
+  end
+
 end
 
 class Object

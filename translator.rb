@@ -642,10 +642,9 @@ class Translator
 
   def translate_dolist(params)
     (var, list), *body = params # result-form is not supported
-    b = "nil.tap do\n"
-    b += "(#{translate(list)} || []).each do |#{translate(var)}|\n"
+    b = "dolist(#{translate(list)}) do |#{translate(var)}|\n"
     b += body.map(&method(:translate)).join("\n") + "\n"
-    return b += "end\nend"
+    return b += "end"
   end
 
   def translate_load(params)
