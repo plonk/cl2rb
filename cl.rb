@@ -274,6 +274,9 @@ module CL
       return nil
     when nil
       return output
+    when IO
+      destination.write output
+      return nil
     else
       fail "format: unsupported destionation #{destination.inspect}"
     end
@@ -363,6 +366,17 @@ module CL
       yield(elt)
     end
     return nil
+  end
+
+  def with_open_file(path, opts = {})
+    if opts[:direction] == :output
+      mode = "w"
+    else
+      mode = "r"
+    end
+    File.open(path, mode) do |file|
+      yield(file)
+    end
   end
 
 end
