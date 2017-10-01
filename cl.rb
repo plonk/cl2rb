@@ -1,4 +1,3 @@
-require 'sxp'
 require 'ruby-beautify'
 
 # CommonLisp の関数を実装するモジュール
@@ -23,11 +22,11 @@ module CL
     while s = gets
       buf += s
       begin
-        return SXP::Reader::CommonLisp.read(buf)
-      rescue SXP::Reader::EOF
+        return Reader.read_sexp(buf)
+      rescue Reader::PrematureEndException
       end
     end
-    return SXP::Reader::CommonLisp.read(buf)
+    return Reader.read_sexp(buf)
   end
 
   def eval(sexp)
@@ -88,7 +87,7 @@ module CL
     when ".lisp"
       fasl = filename.sub(/\.lisp\z|\z/, ".rb")
       rb = ""
-      SXP::Reader::CommonLisp.read_all(File.read(filename)).each do |sexp|
+      Reader.read_all(File.read(filename)).each do |sexp|
         rb.concat $translator.translate(sexp)
         rb.concat "\n"
       end
@@ -134,7 +133,7 @@ module CL
 
   def translate_file(filename)
     rb = ""
-    SXP::Reader::CommonLisp.read_all(File.read(filename)).each do |sexp|
+    Reader.read_all(File.read(filename)).each do |sexp|
       rb.concat $translator.translate(sexp)
       rb.concat "\n"
     end
@@ -347,6 +346,14 @@ module CL
 
   def equal(a, b)
     a == b
+  end
+
+  def software_type
+    "Unknown"
+  end
+
+  def software_version
+    "Unknown"
   end
 end
 

@@ -6,7 +6,6 @@ RubyVM::InstructionSequence.compile_option = {
   trace_instruction: false
 }
 
-require 'sxp'
 require 'pp'
 require_relative 'translator'
 
@@ -19,12 +18,13 @@ include CL
 require 'optparse'
 require 'ostruct'
 
+require_relative 'reader'
 
 module Cl2rb
   module_function
 
   def translate_file(filename)
-    program = SXP::Reader::CommonLisp.read_all(File.read(filename))
+    program = Reader.read_all(File.read(filename))
 
     program.each do |sexp|
       puts $translator.translate(sexp)
@@ -74,10 +74,10 @@ module Cl2rb
     while line = Readline.readline(prompt, RECORD_HISTORY)
       buf += line
       begin
-        sexp = SXP::Reader::CommonLisp.read(buf)
+        sexp = Reader::read_sexp(buf)
         buf = ""
         prompt = "> "
-      rescue  SXP::Reader::EOF
+      rescue  Reader::PrematureEndException
         prompt = "*   "
         next
       end
