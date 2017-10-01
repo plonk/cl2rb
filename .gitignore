@@ -1,11 +1,3 @@
-## mogeRPG
-io-win32.lisp
-item.lisp
-load.lisp
-maze-test.lisp
-orc-battle.lisp
-out.rb
-
 # github default for Ruby
 *.gem
 *.rbc
