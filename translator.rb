@@ -620,7 +620,11 @@ class Translator
     b += body.map(&method(:translate)).join("\n") + "\n"
     return b += "end\nend"
   end
-    
+
+  def translate_load(params)
+    params += [:":from", :__FILE__]
+    return translate_function_application(:load, params)
+  end
 
   def translate(sexp)
     case sexp
@@ -692,6 +696,8 @@ class Translator
           translate_flet(rest)
         when :push
           translate_push(rest)
+        when :load
+          translate_load(rest)
         when :"destructuring-bind"
           translate_destructuring_bind(rest)
         when :"with-open-file"

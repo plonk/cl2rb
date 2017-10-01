@@ -81,7 +81,7 @@ module Cl2rb
         next
       end
       rb = $translator.translate(sexp)
-      value = Kernel.eval(rb, $global_scope)
+      value = Kernel.eval(rb, $global_scope, "(repl)")
       puts
       p value
     end

@@ -79,21 +79,30 @@ module CL
     args
   end
 
-  def load(filename, *_)
-    fasl = filename.sub(/\.lisp\z|\z/, ".rb")
-    STDERR.puts "making fasl #{fasl}" if $DEBUG
-    rb = ""
-    SXP::Reader::CommonLisp.read_all(File.read(filename)).each do |sexp|
-      rb.concat $translator.translate(sexp)
-      rb.concat "\n"
+  require 'pathname'
+  def load(filename, opts = {})
+    if opts[:from] && !Pathname.new(filename).absolute?
+      filename = File.join File.dirname(opts[:from]), filename
     end
-    rb.concat("\n") if rb[-1] != "\n"
-    rb2 = RubyBeautify.pretty_string(rb, indent_token: ' ', indent_count: 2)
-    open(fasl, "w") do |f|
-      f.write(rb2)
+    case File.extname(filename)
+    when ".lisp"
+      fasl = filename.sub(/\.lisp\z|\z/, ".rb")
+      rb = ""
+      SXP::Reader::CommonLisp.read_all(File.read(filename)).each do |sexp|
+        rb.concat $translator.translate(sexp)
+        rb.concat "\n"
+      end
+      rb.concat("\n") if rb[-1] != "\n"
+      rb2 = RubyBeautify.pretty_string(rb, indent_token: ' ', indent_count: 2)
+      open(fasl, "w") do |f|
+        f.write(rb2)
+      end
+      Kernel.eval(rb2, $global_scope, fasl)
+    when ".rb"
+      Kernel.load(filename)
+    else fail "could not determine file type"
     end
-    Kernel.eval(rb2, $global_scope)
-    true
+      true
   end
 
   def cl_to_rb(sexp)
