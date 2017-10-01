@@ -81,9 +81,24 @@ module Cl2rb
         next
       end
       rb = $translator.translate(sexp)
-      value = Kernel.eval(rb, $global_scope, "(repl)")
-      puts
-      p value
+      begin
+        value = Kernel.eval(rb, $global_scope, "(repl)")
+        puts
+        p value
+      rescue => e
+        if e.message.empty?
+          m = "unhandled exception"
+        else
+          m = "#{e.message} (#{e.class.to_s})"
+        end
+        e.backtrace.each.with_index do |line, i|
+          if i==0
+            puts line + ": " + m
+          else
+            puts line
+          end
+        end
+      end
     end
     puts "\nBye."
   end
