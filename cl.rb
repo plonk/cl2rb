@@ -418,8 +418,15 @@ module CL
   end
 
   def string_equal(s1, s2)
-    fail unless s1.is_a?(Symbol) || s1.is_a?(String)
-    fail unless s2.is_a?(Symbol) || s2.is_a?(String)
+    if s1.nil? || s2.nil?
+      if s1 == s2
+        return true
+      else
+        return false
+      end
+    end
+    fail s1.inspect unless s1.is_a?(Symbol) || s1.is_a?(String)
+    fail s2.inspect unless s2.is_a?(Symbol) || s2.is_a?(String)
     s1 = s1.to_s.upcase
     s2 = s2.to_s.upcase
     return s1 == s2
