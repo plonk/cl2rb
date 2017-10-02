@@ -374,11 +374,79 @@ module CL
     else
       mode = "r"
     end
-    File.open(path, mode) do |file|
-      yield(file)
+    begin
+      File.open(path, mode) do |file|
+        yield(file)
+      end
+    rescue Errno::ENOENT
+      if opts.key? :"if-does-not-exist"
+        yield(opts[:"if-does-not-exist"])
+      else
+        raise
+      end
     end
   end
 
+  def read_line
+    gets.chomp
+  end
+
+  def file_length(file)
+    oldpos = file.pos
+    file.seek(0, File::SEEK_END)
+    size = file.pos
+    file.seek(oldpos, File::SEEK_SET)
+    return size
+  end
+
+  def make_string(size, opts = {})
+    if opts[:"initial-element"]
+      return opts[:"initial-element"] * size
+    else
+      return String.new
+    end
+  end
+
+  def read_sequence(sequence, file, opts = {})
+    fail unless opts == {}
+    sequence.replace(file.read)
+    return sequence.size
+  end
+
+  def read_from_string(str)
+    Reader.read_sexp(str)
+  end
+
+  def string_equal(s1, s2)
+    fail unless s1.is_a?(Symbol) || s1.is_a?(String)
+    fail unless s2.is_a?(Symbol) || s2.is_a?(String)
+    s1 = s1.to_s.upcase
+    s2 = s2.to_s.upcase
+    return s1 == s2
+  end
+
+  def assoc(key, alist, opts = {})
+    test = opts[:test] || lambda { |a,b| a == b }
+    alist.each do |pair|
+      if pair.is_a?(Array)
+        if pair[0] == key
+          return pair
+        end
+      elsif pair.is_a?(Cons)
+        if pair.car == key
+          return pair
+        end
+      else fail
+      end
+    end
+    return nil
+  end
+
+  # FIXME: 安定じゃないよ！
+  def stable_sort(list, test, opts = {})
+    key = opts[:key] || :itself.to_proc
+    list.map.sort { |a,b| test.call(key.(a),key.(b)) }
+  end
 end
 
 class Object

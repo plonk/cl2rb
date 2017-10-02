@@ -177,7 +177,7 @@ class Translator
           pair = ls1.shift
           case pair
           when Symbol
-            trnalsated = "#{translate pair} = nil"
+            translated << "#{translate pair} = nil"
           when Array
             translated << "#{translate(pair[0])} = #{translate(pair[1])}"
           else
