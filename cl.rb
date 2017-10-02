@@ -202,6 +202,10 @@ module CL
   end
 
   def make_array(arg, opts = {})
+    unless opts[:"initial-contents"].nil?
+      return opts[:"initial-contents"]
+    end
+
     case arg
     when Integer
       make_array([arg], opts)
