@@ -24,7 +24,7 @@ module CL
       buf += s
       begin
         return Reader.read_sexp(buf)
-      rescue Reader::PrematureEndException
+      rescue Reader::PrematureEndException, Reader::NullInputException
       end
     end
     return Reader.read_sexp(buf)
