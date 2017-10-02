@@ -1,8 +1,9 @@
 require 'ruby-beautify'
+require_relative 'format'
 
 # CommonLisp の関数を実装するモジュール
 module CL
-  module_function 
+  module_function
 
   $random_state = Random.new(0)
 
@@ -142,7 +143,7 @@ module CL
 
   def car(arr)
     case arr
-    when Array 
+    when Array
       arr[0]
     when Cons
       arr.car
@@ -265,8 +266,7 @@ module CL
   end
 
   def format(destination, control_string, *args)
-    cs1 = control_string.gsub("~%", "\n").gsub("~a", "%s").gsub("~", "%")
-    output = cs1 % args
+    output = Format.format(control_string, *args)
 
     case destination
     when true
