@@ -278,7 +278,7 @@ module CL
       destination.write output
       return nil
     else
-      fail "format: unsupported destionation #{destination.inspect}"
+      fail "format: unsupported destination #{destination.inspect}"
     end
   end
 
