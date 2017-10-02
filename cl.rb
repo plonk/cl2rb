@@ -452,7 +452,7 @@ module CL
   # FIXME: 安定じゃないよ！
   def stable_sort(list, test, opts = {})
     key = opts[:key] || :itself.to_proc
-    list.map.sort { |a,b| test.call(key.(a),key.(b)) }
+    list.map.sort { |a,b| test.call(key.(a),key.(b)) ? -1 : 1 }
   end
 end
 
