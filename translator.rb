@@ -55,6 +55,10 @@ class Translator
 
   def sanitize_varname(name)
     name.gsub(/->/, '_to_')
+      .sub(/<=$/, '_less_eq')
+      .sub(/>=$/, '_more_eq')
+      .sub(/\/=$/, '_not_eq')
+      .sub(/=$/, '_eq')
       .sub(/\?$/, 'p')
       .gsub(/\W/, '_')
   end
@@ -79,12 +83,17 @@ class Translator
     case symbol1
     when "t"
       "true"
+    when "nil"
+      "nil"
     when /^:(.*)/ # keyword
       $1.to_sym.inspect
     when /^\*(.+)\*/ # earmuffed
       "$#{sanitize_varname($1)}"
     when /^\+(.+)\+/ # constant
       "#{sanitize_varname($1).upcase}"
+    when /:/ # symbol in another package
+      mod, sym = symbol1.split(':',2)
+      sanitize_module_name(mod) + "::" + sanitize_varname(sym)
     else
       sanitize_varname(symbol1)
     end
@@ -143,7 +152,13 @@ class Translator
     when :<
       "method(:less_than)"
     else
-      "method(#{translate(f).to_sym.inspect})"
+      f1 = translate_function_name(f)
+      if f1 =~ /\./
+        mod, fun = f1.split('.',2)
+        "#{mod}.method(:#{fun})"
+      else
+        "method(#{f1.to_sym.inspect})"
+      end
     end
   end
 
@@ -152,6 +167,11 @@ class Translator
     if first_keyword
       normal_args = args[0...first_keyword]
       keyword_args = args[first_keyword..-1]
+
+      if keyword_args.size.odd?
+        normal_args = args
+        keyword_args = []
+      end
     else
       normal_args = args
       keyword_args = []
@@ -283,6 +303,8 @@ class Translator
       end
     when :t
       "true"
+    when :nil
+      "nil"
     when Symbol
       sexp.inspect
     when Integer
@@ -624,6 +646,10 @@ class Translator
     return b += body.map(&method(:translate)).join("\n")
   end
 
+  def translate_labels(params)
+    translate_flet(params)
+  end
+
   def translate_destructuring_bind(params)
     vars, init, *body = params
     b = ""
@@ -724,6 +750,8 @@ class Translator
           translate_push(rest)
         when :load
           translate_load(rest)
+        when :labels
+          translate_labels(rest)
         when :"destructuring-bind"
           translate_destructuring_bind(rest)
         when :"with-open-file"

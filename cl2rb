@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+require 'curses'
 
 # 末尾再帰最適化を有効化する。
 RubyVM::InstructionSequence.compile_option = {
@@ -13,6 +14,7 @@ require 'readline'
 require 'mathn'
 require_relative 'cl'
 require_relative 'sb_ext'
+require_relative 'ql'
 include CL
 
 require 'optparse'

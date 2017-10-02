@@ -356,7 +356,7 @@ module CL
   end
 
   def software_type
-    "Unknown"
+    "Linux"
   end
 
   def software_version
@@ -453,6 +453,27 @@ module CL
     return nil
   end
 
+  def _not_eq(n, m)
+    n != m
+  end
+
+  def char_less_eq(c, d)
+    c.ord <= d.ord
+  end
+
+  # case sensitive string=
+  def string_eq(s, t)
+    s == t
+  end
+
+  def butlast(arr)
+    arr[0..-2]
+  end
+
+  def cons(car, cdr)
+    [car, *cdr]
+  end
+
   # FIXME: 安定じゃないよ！
   def stable_sort(list, test, opts = {})
     key = opts[:key] || :itself.to_proc
@@ -510,4 +531,13 @@ class Cons
   def inspect
     "(#{@car} . #{@cdr})"
   end
+
+  def to_a
+    if cdr.nil?
+      [car]
+    else
+      fail 'improper list'
+    end
+  end
+
 end
