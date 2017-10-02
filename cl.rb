@@ -471,7 +471,12 @@ module CL
   end
 
   def cons(car, cdr)
-    [car, *cdr]
+    case cdr
+    when Array
+      [car, *cdr]
+    else
+      Cons.new(car, cdr)
+    end
   end
 
   # FIXME: 安定じゃないよ！
