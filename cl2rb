@@ -22,6 +22,8 @@ require 'ostruct'
 
 require_relative 'reader'
 
+require_relative 'format'
+
 module Cl2rb
   module_function
 
@@ -87,7 +89,7 @@ module Cl2rb
       begin
         value = Kernel.eval(rb, $global_scope, "(repl)")
         puts
-        p value
+        puts CL.print1(value)
       rescue => e
         if e.message.empty?
           m = "unhandled exception"

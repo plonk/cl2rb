@@ -9,7 +9,7 @@ module CL
 
   def print(v)
     Kernel.print "\n"
-    Kernel.print v.inspect
+    Kernel.print Format.princ_format(v, false)
     Kernel.print " "
     return v
   end
@@ -484,6 +484,10 @@ module CL
     key = opts[:key] || :itself.to_proc
     list.map.sort { |a,b| test.call(key.(a),key.(b)) ? -1 : 1 }
   end
+
+  def print1(v)
+    Kernel.print Format.prin1_format(v, nil)
+  end
 end
 
 class Object
@@ -531,10 +535,6 @@ class Cons
   def initialize(car, cdr)
     @car = car
     @cdr = cdr
-  end
-
-  def inspect
-    "(#{@car} . #{@cdr})"
   end
 
   def to_a

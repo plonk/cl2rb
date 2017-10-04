@@ -15,6 +15,16 @@ module Format
       s = nil_as_list ? "()" : "nil"
     when Array
       s = "(" + value.map { |v| princ_format(v, nil_as_list) }.join(' ') + ")"
+    when true
+      s = "t"
+    when Cons
+      if value.cdr.nil?
+        s = princ_format([value.car], nil_as_list)
+      else
+        car1 = princ_format(value.car, nil_as_list)
+        cdr1 = princ_format(value.cdr, nil_as_list)
+        s = "(#{car1} . #{cdr1})"
+      end
     else
       s = value.inspect
     end
@@ -31,6 +41,16 @@ module Format
       s = nil_as_list ? "()" : "nil"
     when Array
       s = "(" + value.map { |v| prin1_format(v, nil_as_list) }.join(' ') + ")"
+    when true
+      s = "t"
+    when Cons
+      if value.cdr.nil?
+        s = prin1_format([value.car], nil_as_list)
+      else
+        car1 = prin1_format(value.car, nil_as_list)
+        cdr1 = prin1_format(value.cdr, nil_as_list)
+        s = "(#{car1} . #{cdr1})"
+      end
     else
       s = value.inspect
     end
