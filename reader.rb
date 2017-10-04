@@ -98,14 +98,16 @@ module Reader
     begin
       unless MACRO_CHARS.empty?
         if input =~ /\A([#{Regexp.escape(MACRO_CHARS.keys.join)}])/
-          if MACRO_CHARS[$1].respond_to? :call
-            return MACRO_CHARS[$1].call($', $1)
-          elsif MACRO_CHARS[$1].is_a? Hash
-            ftable = MACRO_CHARS[$1]
-            if fn = ftable[$'[0]]
-              return fn.call($'[1..-1], $1, $'[0])
+          char1 = $1.upcase
+          rest = $'
+          if MACRO_CHARS[char1].respond_to? :call
+            return MACRO_CHARS[char1].call(rest, char1)
+          elsif (ftable = MACRO_CHARS[char1]).is_a? Hash
+            char2 = rest[0].upcase
+            if fn = ftable[char2]
+              return fn.call(rest[1..-1], char1, char2)
             else
-              raise "no dispatch macro for #{$1} #{$'[0]}"
+              raise "no dispatch macro for #{char1} #{char2}"
             end
           else
             raise "something wrong"
@@ -240,6 +242,26 @@ module Reader
   set_dispatch_macro_character("#", "\\",
                                lambda { |input, _char_a, _char_b|
                                  [input[0], input[1..-1]]
+                               })
+
+  # 16進リテラル
+  set_dispatch_macro_character("#", "X",
+                               lambda { |input, _char_a, _char_b|
+                                 if input =~ /\A([a-fA-F0-9]+)/
+                                   [$1.to_i(16), $']
+                                 else
+                                   fail 'invalid hex literal'
+                                 end
+                               })
+
+  # 8進リテラル
+  set_dispatch_macro_character("#", "O",
+                               lambda { |input, _char_a, _char_b|
+                                 if input =~ /\A([0-7]+)/
+                                   [$1.to_i(8), $']
+                                 else
+                                   fail 'invalid octal literal'
+                                 end
                                })
 
   # 関数名
