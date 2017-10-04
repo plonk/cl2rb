@@ -595,9 +595,10 @@ class Translator
       case v[:type]
       when :range
         op =  v[:inclusive] ? ".." : "..."
-        b += "(#{translate v[:lbound]} #{op} #{translate v[:ubound]}).each do |e|\n"
+        ubound1 = (v[:ubound] == Float::INFINITY) ? "Float::INFINITY" : translate(v[:ubound])
+        b += "(#{translate v[:lbound]} #{op} #{ubound1}).each do |e|\n"
       when :list
-        b += "#{translate v[:list]}.each do |e|\n"
+        b += "(#{translate v[:list]} || []).each do |e|\n"
       else fail
       end
       b += "y << e\n"
