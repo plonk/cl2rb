@@ -8,4 +8,12 @@ module Sb_ext
   def quit(opts = {})
     Kernel.exit
   end
+
+  def _invoke_debugger_hook_
+    @@invoke_debugger_hook
+  end
+
+  def _invoke_debugger_hook_=(f)
+    @@invoke_debugger_hook = f
+  end
 end
