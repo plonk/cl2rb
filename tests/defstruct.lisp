@@ -19,3 +19,8 @@
   (setf (hoge-x h) 10000)
   (print (hoge-x h)))
 
+(print (hoge-p (make-hoge)))
+(print (hoge-p (make-fuga)))
+(print (hoge-p t))
+(print (hoge-p nil))
+(print (hoge-p 1))

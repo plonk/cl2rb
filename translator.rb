@@ -278,6 +278,11 @@ class Translator
     b += "#{name1.capitalize}.new(opts)\n"
     b += "end\n"
 
+    # 型判別述語定義
+
+    b += "def #{name1}_p(v)\n"
+    b += "v.is_a?(#{name1.capitalize})\n"
+    b += "end\n"
 
     # アクセッサー関数定義
     all_fields = @structs[name][:fields]
