@@ -257,8 +257,21 @@ module CL
 
   # def placeof_nth
 
-  def remove(item, sequence)#, opts = {})
-    return sequence.reject { |i| i == item }
+  def remove(item, sequence, opts = {})
+    test  = opts[:test] || :==.to_proc
+    count = opts[:count] || nil
+    return sequence.reject { |i|
+      if count && count == 0
+        false
+      elsif test.call(i, item)
+        if count
+          count -= 1
+        end
+        true
+      else
+        false
+      end
+    }
   end
 
   def cadr(arr)
