@@ -68,6 +68,9 @@ module CL
   end
 
   def map(type, f, ary)
+    if ary.is_a? String
+      ary = ary.chars
+    end
     ary.map(&f)
   end
 
