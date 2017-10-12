@@ -244,7 +244,8 @@ module CL
   end
 
   def length(arr)
-    arr.size
+    arr.to_a # convert nil to []
+      .size
   end
 
   def nth(index, arr)
