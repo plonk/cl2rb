@@ -63,6 +63,10 @@ module CL
     ls[3]
   end
 
+  def concatenate(type, *sequences)
+    sequences.inject(:+)
+  end
+
   def map(type, f, ary)
     ary.map(&f)
   end
