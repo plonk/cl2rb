@@ -271,6 +271,14 @@ module Reader
                                  [[:function, exp], rest]
                                })
 
+  # read-time 条件
+  set_dispatch_macro_character("#", "+",
+                               lambda { |input, _char_a, _char_b|
+                                 feature, rest = read(input)
+                                 exp, rest1 = read(rest)
+                                 [nil, rest1] # 本来空白になるべき
+                               })
+
   read_infix_digits = lambda { |input, _hash, first_digit|
     input = input.dup
     digits = first_digit
