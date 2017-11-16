@@ -516,16 +516,14 @@ class Translator
     "next_method.call"
   end
 
-  def translate_loop(params)
-    input = params.dup
-
+  # analysis phase
+  def translate_loop_analyze(input)
     body = []
     vars = []
     test = nil
     collect = nil # loop variable to be recorded
     test_polarity = true
 
-    # analysis phase
     loop do
       if input.empty?
         break
@@ -562,6 +560,23 @@ class Translator
             input.shift
             done = true
             break
+          when :across
+            input.shift
+            vars << { name: var, type: :list, list: input[0] }
+            input.shift
+            done = true
+            break
+          when :"="
+            input.shift
+            init = input.shift
+            if input[0] == :then
+              input.shift
+              then_exp = input.shift
+            else
+              then_exp = var
+            end
+            vars << { name: var, type: :then, init: init, then: then_exp }
+            done = true
           else
             break
           end
@@ -586,24 +601,34 @@ class Translator
         fail "unexpected token #{input[0]}"
       end
     end
+    return { body: body, vars: vars, test: test, collect: collect, test_polarity: test_polarity }
+  end
 
-    # generation phase
+  # generation phase
+  def translate_loop_generate(body:, vars:, test:, collect:, test_polarity:)
     b = ""
     b += "progn do\n" # contain generators
     vars.each do |v|
-      b += "#{translate(v[:name])}_gen = Enumerator.new do |y|\n"
       case v[:type]
-      when :range
-        op =  v[:inclusive] ? ".." : "..."
-        ubound1 = (v[:ubound] == Float::INFINITY) ? "Float::INFINITY" : translate(v[:ubound])
-        b += "(#{translate v[:lbound]} #{op} #{ubound1}).each do |e|\n"
-      when :list
-        b += "(#{translate v[:list]} || []).each do |e|\n"
-      else fail
+      when :range, :list
+        b += "#{translate(v[:name])}_gen = Enumerator.new do |y|\n"
+        case v[:type]
+        when :range
+          op =  v[:inclusive] ? ".." : "..."
+          ubound1 = (v[:ubound] == Float::INFINITY) ? "Float::INFINITY" : translate(v[:ubound])
+          b += "(#{translate v[:lbound]} #{op} #{ubound1}).each do |e|\n"
+        when :list
+          b += "(#{translate v[:list]} || []).each do |e|\n"
+        else fail
+        end
+        b += "y << e\n"
+        b += "end\n" # each
+        b += "end\n" # Enumerator.new
+      when :then
+        b += "#{translate(v[:name])} = #{translate(v[:init])}\n"
+      else
+        fail
       end
-      b += "y << e\n"
-      b += "end\n" # each
-      b += "end\n" # Enumerator.new
     end
     if collect
       b += "#{translate collect}_collected = []\n"
@@ -620,7 +645,10 @@ class Translator
       b += "loop do\n"
     end
     vars.each do |v|
-      b += "#{translate v[:name]} = #{translate v[:name]}_gen.next\n"
+      case v[:type]
+      when :range, :list
+        b += "#{translate v[:name]} = #{translate v[:name]}_gen.next\n"
+      end
     end
     b += "progn do\n"
     body.each do |sexp|
@@ -628,6 +656,14 @@ class Translator
     end
     b += "end\n" # progn
     b += "#{translate collect}_collected << #{translate collect}\n" if collect
+
+    vars.each do |v|
+      case v[:type]
+      when :then
+        b += "#{translate(v[:name])} = #{translate(v[:then])}\n"
+      end
+    end
+
     b += "end\n" # loop
     b += "rescue StopIteration\n"
     b += "end\n" # begin
@@ -637,6 +673,10 @@ class Translator
       # b += "nil\n"
     end
     return b += "end" # progn
+  end
+
+  def translate_loop(params)
+    return translate_loop_generate translate_loop_analyze(params.dup)
   end
 
   def translate_flet(params)
