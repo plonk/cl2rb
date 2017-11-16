@@ -85,6 +85,8 @@ class Translator
       "true"
     when "nil"
       "nil"
+    when "in"
+      "_in"
     when /^:(.*)/ # keyword
       $1.to_sym.inspect
     when /^\*(.+)\*/ # earmuffed
