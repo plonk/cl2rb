@@ -120,7 +120,7 @@ class Translator
     operands1 = operands.map(&method(:translate))
     case op
     when :"/", :"*"
-      quo = ["Rational(#{operands1[0]})", *operands[1..-1]].join(" #{op} ")
+      quo = ["Rational(#{operands1[0]})", *operands1[1..-1]].join(" #{op} ")
       "lambda { |__tmp| if __tmp.denominator == 1 then __tmp.to_i else __tmp end }.(#{quo})"
     else 
       operands1.join(" #{op} ")
