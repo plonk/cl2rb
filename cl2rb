@@ -11,7 +11,6 @@ require 'pp'
 require_relative 'translator'
 
 require 'readline'
-require 'mathn'
 require_relative 'cl'
 require_relative 'sb_ext'
 require_relative 'ql'

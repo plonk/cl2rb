@@ -118,7 +118,13 @@ class Translator
   # オペランドが2個未満だった時に動かない
   def translate_arithmetic_operator(op, operands)
     operands1 = operands.map(&method(:translate))
-    operands1.join(" #{op} ")
+    case op
+    when :"/", :"*"
+      quo = ["Rational(#{operands1[0]})", *operands[1..-1]].join(" #{op} ")
+      "lambda { |__tmp| if __tmp.denominator == 1 then __tmp.to_i else __tmp end }.(#{quo})"
+    else 
+      operands1.join(" #{op} ")
+    end
   end
 
   def translate_one_minus(args)
