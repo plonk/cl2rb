@@ -1,4 +1,5 @@
 require_relative 'format'
+require_relative 'translator-js'
 
 # CommonLisp の関数を実装するモジュール
 module CL
@@ -117,6 +118,10 @@ module CL
     #rb.concat("\n") if rb[-1] != "\n"
     #RubyBeautify.pretty_string(rb, indent_token: ' ', indent_count: 2)
     rb
+  end
+
+  def cl_to_js(sexp)
+    TranslatorJs.new.translate(sexp)
   end
 
   def copy_tree(x)

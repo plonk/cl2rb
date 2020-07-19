@@ -36,8 +36,6 @@ module Cl2rb
   end
 
   def main
-    $translator = Translator.new
-
     opts = OpenStruct.new
     opts.mode = :repl
     OptionParser.new do |parser|
@@ -55,7 +53,18 @@ module Cl2rb
         opts.load_file = file
         opts.mode = :translate
       end
+
+      parser.on("-j", "--translate-js LISP_FILE", "Translate Lisp to JavaScript") do |file|
+        opts.load_file = file
+        opts.mode = :translate_js
+      end
     end.parse!(ARGV)
+
+    if opts.mode == :translate_js
+      $translator = TranslatorJs.new
+    else
+      $translator = Translator.new
+    end
 
     case opts.mode
     when :repl
@@ -64,7 +73,7 @@ module Cl2rb
     when :script
       CL.load(opts.load_file)
       exit 0
-    when :translate
+    when :translate, :translate_js
       translate_file(opts.load_file)
     end
   end
