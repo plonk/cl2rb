@@ -1,4 +1,3 @@
-require 'ruby-beautify'
 require_relative 'format'
 
 # CommonLisp の関数を実装するモジュール
@@ -100,7 +99,8 @@ module CL
         rb.concat "\n"
       end
       rb.concat("\n") if rb[-1] != "\n"
-      rb2 = RubyBeautify.pretty_string(rb, indent_token: ' ', indent_count: 2)
+      #rb2 = RubyBeautify.pretty_string(rb, indent_token: ' ', indent_count: 2)
+      rb2 = rb
       open(fasl, "w") do |f|
         f.write(rb2)
       end
@@ -114,8 +114,9 @@ module CL
 
   def cl_to_rb(sexp)
     rb = $translator.translate(sexp)
-    rb.concat("\n") if rb[-1] != "\n"
-    RubyBeautify.pretty_string(rb, indent_token: ' ', indent_count: 2)
+    #rb.concat("\n") if rb[-1] != "\n"
+    #RubyBeautify.pretty_string(rb, indent_token: ' ', indent_count: 2)
+    rb
   end
 
   def copy_tree(x)
@@ -145,7 +146,9 @@ module CL
       rb.concat $translator.translate(sexp)
       rb.concat "\n"
     end
-    RubyBeautify.pretty_string(rb, indent_token: ' ', indent_count: 2)
+
+    #RubyBeautify.pretty_string(rb, indent_token: ' ', indent_count: 2)
+    rb
   end
 
   def car(arr)
