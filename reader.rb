@@ -40,7 +40,7 @@ module Reader
       []
     elsif MACROS.has_key?(sexp[0])
       macro = MACROS[sexp[0]]
-      LR.macroexpand macro.call(*sexp[1..-1])
+      macroexpand macro.call(*sexp[1..-1])
     else
       [sexp[0]] + sexp[1..-1].map(&method(:macroexpand))
     end
