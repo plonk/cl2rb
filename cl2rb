@@ -26,11 +26,17 @@ require_relative 'format'
 module Cl2rb
   module_function
 
-  def translate_file(filename)
+  def translate_file(opts)
+    filename = opts.load_file
+    
     program = Reader.read_all(File.read(filename))
 
     program.each do |sexp|
-      puts $translator.translate(sexp)
+      if opts.mode == :translate_js
+        puts $translator.translate(sexp) + ";"
+      else
+        puts $translator.translate(sexp)
+      end
       puts
     end
   end
@@ -74,7 +80,7 @@ module Cl2rb
       CL.load(opts.load_file)
       exit 0
     when :translate, :translate_js
-      translate_file(opts.load_file)
+      translate_file(opts)
     end
   end
 
