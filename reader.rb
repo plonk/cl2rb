@@ -146,7 +146,11 @@ module Reader
       if symbol_string =~ /\A-?\d+\z/
         [symbol_string.to_i, rest]
       else
-        [symbol_string.to_sym, rest]
+        if symbol_string =~ /\A:/
+          [$'.to_sym, rest]
+        else
+          [symbol_string.to_sym, rest]
+        end
       end
     when /\A"/
       rest = $'
