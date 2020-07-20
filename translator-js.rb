@@ -411,7 +411,7 @@ class TranslatorJs
     lines = params.each_slice(2).map(&translate_pair)
     lines[-1] = "return #{lines[-1]}"
     body = lines.join("\n")
-    return "(function(){#{body})()"
+    return "(function(){#{body}})()"
   end
 
   def translate_push(params)
