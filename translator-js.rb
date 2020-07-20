@@ -720,7 +720,7 @@ class TranslatorJs
         if i == body.size-1
           b += "return "
         end
-        b += translate(sexp) + "\n"
+        b += translate(sexp) + ";\n"
       end
       return b
     end
