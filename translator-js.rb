@@ -611,6 +611,12 @@ class TranslatorJs
         unless done
           vars << { name: var, type: :range, lbound: lbound, ubound: ubound, inclusive: inclusive }
         end
+      elsif input[0] == :with
+        input.shift
+        var = input.shift
+        fail unless input.shift == :"="
+        init = input.shift
+        vars << { name: var, type: :with, init: init }
       elsif input[0] == :while
         input.shift
         test = input[0]
@@ -625,7 +631,7 @@ class TranslatorJs
         collect = input[0]
         input.shift
       else
-        fail "unexpected token #{input[0]}"
+        fail "unexpected token \"#{input[0]}\""
       end
     end
     return { body: body, vars: vars, test: test, collect: collect, test_polarity: test_polarity }
@@ -634,25 +640,25 @@ class TranslatorJs
   # generation phase
   def translate_loop_generate(body:, vars:, test:, collect:, test_polarity:)
     b = ""
-    b += "progn do\n" # contain generators
+    b += "(function(){\n" # contain generators
     vars.each do |v|
       case v[:type]
       when :range, :list
-        b += "#{translate(v[:name])}_gen = Enumerator.new do |y|\n"
+        b += "let #{translate(v[:name])}_gen = (function* (){\n"
         case v[:type]
         when :range
-          op =  v[:inclusive] ? ".." : "..."
-          ubound1 = (v[:ubound] == Float::INFINITY) ? "Float::INFINITY" : translate(v[:ubound])
-          b += "(#{translate v[:lbound]} #{op} #{ubound1}).each do |e|\n"
+          op =  v[:inclusive] ? "<=" : "<"
+          ubound1 = (v[:ubound] == Float::INFINITY) ? "1/0" : translate(v[:ubound])
+          b += "for (let e = #{translate v[:lbound]}; e #{op} #{ubound1}; e++) {"
         when :list
-          b += "(#{translate v[:list]} || []).each do |e|\n"
+          b += "for (let e of #{translate v[:list]}) {"
         else fail
         end
-        b += "y << e\n"
-        b += "end\n" # each
-        b += "end\n" # Enumerator.new
-      when :then
-        b += "#{translate(v[:name])} = #{translate(v[:init])}\n"
+        b += "yield e\n"
+        b += "}\n" # each
+        b += "})()\n" # Enumerator.new
+      when :then, :with
+        b += "let #{translate(v[:name])} = #{translate(v[:init])}\n"
       else
         fail
       end
@@ -661,28 +667,29 @@ class TranslatorJs
       b += "#{translate collect}_collected = []\n"
     end
 
-    b += "begin\n"
     if test
       if test_polarity
-        b += "while #{translate(test)}\n"
+        b += "while (#{translate(test)}) {\n"
       else
-        b += "until #{translate(test)}\n"
+        b += "while (!(#{translate(test)})) {\n"
       end
     else
-      b += "loop do\n"
+      b += "while (true) {\n"
     end
     vars.each do |v|
       case v[:type]
       when :range, :list
-        b += "#{translate v[:name]} = #{translate v[:name]}_gen.next\n"
+        name = translate v[:name]
+        b += "let #{name} = #{name}_gen.next()\n"
+        b += "if (#{name}.done) {break} else {#{name} = #{name}.value}\n"
       end
     end
-    b += "progn do\n"
+
     body.each do |sexp|
-      b += translate(sexp) + "\n"
+      b += translate(sexp) + ";\n"
     end
-    b += "end\n" # progn
-    b += "#{translate collect}_collected << #{translate collect}\n" if collect
+
+    b += "#{translate collect}_collected.push(#{translate collect})\n" if collect
 
     vars.each do |v|
       case v[:type]
@@ -691,15 +698,13 @@ class TranslatorJs
       end
     end
 
-    b += "end\n" # loop
-    b += "rescue StopIteration\n"
-    b += "end\n" # begin
+    b += "}\n" # loop
     if collect
-      b += "#{translate collect}_collected\n"
+      b += "return #{translate collect}_collected\n"
     else
       # b += "nil\n"
     end
-    return b += "end" # progn
+    return b += "})()" # progn
   end
 
   def translate_loop(params)
