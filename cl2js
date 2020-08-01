@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# coding: utf-8
 require 'curses'
 
 # 末尾再帰最適化を有効化する。
@@ -23,14 +24,14 @@ require_relative 'reader'
 
 require_relative 'format'
 
-module Cl2rb
+module Cl2js
   module_function
 
   def translate_file(filename)
     program = Reader.read_all(File.read(filename))
 
     program.each do |sexp|
-      puts $translator.translate(sexp)
+      puts $translator.translate(sexp) + ";"
       puts
     end
   end
@@ -39,7 +40,7 @@ module Cl2rb
     opts = OpenStruct.new
     opts.mode = :repl
     OptionParser.new do |parser|
-      parser.banner = "Usage: cl2rb"
+      parser.banner = "Usage: cl2js"
       parser.on("-l", "--load LISP_FILE", "Load Lisp file") do |file|
         opts.load_file = file
       end
@@ -49,13 +50,13 @@ module Cl2rb
         opts.mode = :script
       end
 
-      parser.on("-t", "--translate LISP_FILE", "Translate Lisp to Ruby") do |file|
+      parser.on("-t", "--translate LISP_FILE", "Translate Lisp to JavaScript") do |file|
         opts.load_file = file
         opts.mode = :translate
       end
     end.parse!(ARGV)
 
-    $translator = Translator.new
+    $translator = TranslatorJs.new
 
     case opts.mode
     when :repl
@@ -111,5 +112,5 @@ end
 $global_scope = binding
 
 if __FILE__ == $0
-  Cl2rb.main
+  Cl2js.main
 end

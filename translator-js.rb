@@ -362,15 +362,15 @@ class TranslatorJs
 
     assign_list, *body = params
 
-    b = "progn do\n"
+    b = "(function(){\n"
     assign_list.each do |var, init|
-      b += "#{translate(var)} = #{translate(init)}\n"
+      b += "let #{translate(var)} = #{translate(init)}\n"
     end
     b += "\n"
     body.each do |sexp|
       b += translate(sexp) + "\n"
     end
-    return b += "end"
+    return b += "})()"
   end
 
   # def find_struct_accessor(funcname)
